@@ -31,7 +31,6 @@ let callApi = (file) => {
   return client.generalBasic(image, options);
   */
 
-  /*
   // 高精度版
   let options = {};
   options["detect_direction"] = "true";
@@ -39,9 +38,9 @@ let callApi = (file) => {
 
   // 带参数调用通用文字识别（高精度版）
   return client.accurateBasic(image, options);
-  */
 
   // 含位置高精度版
+  /*
   let options = {};
   options["recognize_granularity"] = "big";
   options["detect_direction"] = "true";
@@ -50,6 +49,7 @@ let callApi = (file) => {
 
   // 带参数调用通用文字识别（含位置高精度版）
   return client.accurate(image, options);
+  */
 
   /*
   // 含生僻字版
@@ -89,13 +89,18 @@ MongoClient.connect(dbUrl,{useNewUrlParser: true}, function(err, client) {
     return parseInt(f1) - parseInt(f2);
   });
 
-  let count = 30;// 每日免费接口次数限制
-  let intervalStream = Rx.Observable.interval(3000).take(count);
+  let count = 50;// 每日免费接口次数限制
+  let intervalStream = Rx.Observable.interval(2000).take(count);
   let requestStream = Rx.Observable.from(dirFiles).take(count);
   requestStream = intervalStream.zip(requestStream, (interval, request) => request);
   let responseStream = requestStream.flatMap(file => Rx.Observable.fromPromise(callApi(file)));
   let dbStream = responseStream
-    .zip(requestStream, (response, file) => {return {file: file, data: response}})
+    .zip(requestStream, (response, file) => {
+      if (response.error_code) {
+        throw response.error_msg;
+      }
+      return {file: file, data: response}
+    })
     .flatMap(data => Rx.Observable.fromPromise(collection.insertOne(data)));
 
   dbStream.zip(requestStream, (dbResult, file) => file)
@@ -106,6 +111,7 @@ MongoClient.connect(dbUrl,{useNewUrlParser: true}, function(err, client) {
         },
         err => {
           console.log(err);
+          client.close();
         },
         () => {
           console.log('完成');
