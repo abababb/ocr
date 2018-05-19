@@ -9,6 +9,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "baidu-aip-sdk": "^2.3.1"
+    "baidu-aip-sdk": "^2.3.1",
+    "rxjs": "^6.1.0",
+    "rxjs-compat": "^6.1.0"
   }
 }
