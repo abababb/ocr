@@ -10,68 +10,89 @@ const APP_ID = "11257987";
 const API_KEY = "MMGDH4T8Ae4ZQgDK5cKLfa8k";
 const SECRET_KEY = "buopkedYa2TasKT91axAegDbti6N6WUp";
 
-const PATH = 'assets/lingqi';
+const PATH = 'assets/lingqi1';
 const dbUrl = 'mongodb://localhost:27017';
 const dbName = 'lingqi';
+const colName = 'simple';
+const INTERVAL = 2000;
+let count = 500; // 每日免费接口次数限制
 
 // 新建一个对象，建议只保存一个对象调用服务接口
 let client = new AipOcrClient(APP_ID, API_KEY, SECRET_KEY);
 let callApi = (file) => {
   let image = fs.readFileSync(PATH + '/' + file).toString("base64");
 
-  /*
   // 通用文字识别
-  let options = {};
-  options["language_type"] = "CHN_ENG";
-  options["detect_direction"] = "true";
-  options["detect_language"] = "true";
-  options["probability"] = "true";
+  let generalBasic = (image) => {
+    let options = {};
+    options["language_type"] = "CHN_ENG";
+    options["detect_direction"] = "true";
+    options["detect_language"] = "true";
+    options["probability"] = "true";
 
-  // 带参数调用通用文字识别, 图片参数为本地图片
-  return client.generalBasic(image, options);
-  */
+    // 带参数调用通用文字识别, 图片参数为本地图片
+    return client.generalBasic(image, options);
+  }
+
+  // 含位置信息版
+  let general = (image) => {
+    let options = {};
+    options["recognize_granularity"] = "big";
+    options["language_type"] = "CHN_ENG";
+    options["detect_direction"] = "true";
+    options["detect_language"] = "true";
+    options["vertexes_location"] = "true";
+    options["probability"] = "true";
+
+    // 带参数调用通用文字识别（含位置信息版）, 图片参数为本地图片
+    return client.general(image, options);
+  }
 
   // 高精度版
-  let options = {};
-  options["detect_direction"] = "true";
-  options["probability"] = "true";
+  let accurateBasic = (image) => {
+    let options = {};
+    options["detect_direction"] = "true";
+    options["probability"] = "true";
 
-  // 带参数调用通用文字识别（高精度版）
-  return client.accurateBasic(image, options);
+    // 带参数调用通用文字识别（高精度版）
+    return client.accurateBasic(image, options);
+  }
 
   // 含位置高精度版
-  /*
-  let options = {};
-  options["recognize_granularity"] = "big";
-  options["detect_direction"] = "true";
-  options["vertexes_location"] = "true";
-  options["probability"] = "true";
+  let accurate = (image) => {
+    let options = {};
+    options["recognize_granularity"] = "big";
+    options["detect_direction"] = "true";
+    options["vertexes_location"] = "true";
+    options["probability"] = "true";
 
-  // 带参数调用通用文字识别（含位置高精度版）
-  return client.accurate(image, options);
-  */
+    // 带参数调用通用文字识别（含位置高精度版）
+    return client.accurate(image, options);
+  }
 
-  /*
   // 含生僻字版
-  let options = {};
-  options["language_type"] = "CHN_ENG";
-  options["detect_direction"] = "true";
-  options["detect_language"] = "true";
-  options["probability"] = "true";
+  let generalEnhance = (image) => {
+    let options = {};
+    options["language_type"] = "CHN_ENG";
+    options["detect_direction"] = "true";
+    options["detect_language"] = "true";
+    options["probability"] = "true";
 
-  // 带参数调用通用文字识别（含生僻字版）, 图片参数为本地图片
-  return client.generalEnhance(image, options);
-  */
+    // 带参数调用通用文字识别（含生僻字版）, 图片参数为本地图片
+    return client.generalEnhance(image, options);
+  }
 
-  /*
   // 网络图片文字识别
-  let options = {};
-  options["detect_direction"] = "true";
-  options["detect_language"] = "true";
+  let webImage = (image) => {
+    let options = {};
+    options["detect_direction"] = "true";
+    options["detect_language"] = "true";
 
-  // 带参数调用网络图片文字识别, 图片参数为本地图片
-  return client.webImage(image, options)
-  */
+    // 带参数调用网络图片文字识别, 图片参数为本地图片
+    return client.webImage(image, options)
+  }
+
+  return general(image);
 }
 
 
@@ -80,7 +101,7 @@ MongoClient.connect(dbUrl,{useNewUrlParser: true}, function(err, client) {
   assert.equal(null, err);
 
   const db = client.db(dbName);
-  const collection = db.collection('raw');
+  const collection = db.collection(colName);
 
   let dirFiles = fs.readdirSync(PATH);
   dirFiles.sort((f1, f2) => {
@@ -89,8 +110,7 @@ MongoClient.connect(dbUrl,{useNewUrlParser: true}, function(err, client) {
     return parseInt(f1) - parseInt(f2);
   });
 
-  let count = 50;// 每日免费接口次数限制
-  let intervalStream = Rx.Observable.interval(2000).take(count);
+  let intervalStream = Rx.Observable.interval(INTERVAL).take(count);
   let requestStream = Rx.Observable.from(dirFiles).take(count);
   requestStream = intervalStream.zip(requestStream, (interval, request) => request);
   let responseStream = requestStream.flatMap(file => Rx.Observable.fromPromise(callApi(file)));

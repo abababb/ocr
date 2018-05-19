@@ -11,6 +11,9 @@ const APP_KEY = 'rR0L5EZQ8K4ARchN'
 const PATH = 'assets/lingqi2';
 const dbUrl = 'mongodb://localhost:27017';
 const dbName = 'lingqi';
+const colName = 'qq_raw';
+const INTERVAL = 2000;
+let count = 50;
 
 let callApi = (file) => {
   let image = fs.readFileSync(PATH + '/' + file).toString("base64");
@@ -46,7 +49,7 @@ MongoClient.connect(dbUrl,{useNewUrlParser: true}, function(err, client) {
   assert.equal(null, err);
 
   const db = client.db(dbName);
-  const collection = db.collection('qq_raw');
+  const collection = db.collection(colName);
 
   let dirFiles = fs.readdirSync(PATH);
   dirFiles.sort((f1, f2) => {
@@ -55,8 +58,7 @@ MongoClient.connect(dbUrl,{useNewUrlParser: true}, function(err, client) {
     return parseInt(f1) - parseInt(f2);
   });
 
-  let count = 50;
-  let intervalStream = Rx.Observable.interval(2000).take(count);
+  let intervalStream = Rx.Observable.interval(INTERVAL).take(count);
   let requestStream = Rx.Observable.from(dirFiles).take(count);
   requestStream = intervalStream.zip(requestStream, (interval, request) => request);
   let responseStream = requestStream.flatMap(file => Rx.Observable.fromPromise(callApi(file)));
